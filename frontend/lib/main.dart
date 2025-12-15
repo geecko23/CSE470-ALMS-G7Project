@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'register_page.dart';
+import 'homepage_demo.dart';
 
 void main() => runApp(
   MaterialApp(
@@ -8,6 +9,7 @@ void main() => runApp(
     routes: {
       '/login': (context) => Loginpg(),
       '/register': (context) => RegisterPage(),
+      '/home': (context) => HomePage(),
     },
   )
 );
