@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "837050412126",
+    "project_id": "academic-life-management-2",
+    "storage_bucket": "academic-life-management-2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:837050412126:android:3b1ef81bad4a40d85bd8cf",
+        "android_client_info": {
+          "package_name": "com.example.alms"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlT0p9L95v5u0AdbKjep2Qi-KIIEeMBI0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
