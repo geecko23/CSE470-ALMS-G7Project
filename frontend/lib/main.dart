@@ -1,36 +1,92 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'register_page.dart';
 import 'homepage_demo.dart';
 
 void main() => runApp(
-  MaterialApp(
-    debugShowCheckedModeBanner: false,
-    initialRoute: '/login',
-    routes: {
-      '/login': (context) => Loginpg(),
-      '/register': (context) => RegisterPage(),
-      '/home': (context) => HomePage(),
-    },
-  )
-);
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        initialRoute: '/login',
+        routes: {
+          '/login': (context) => const Loginpg(),
+          '/register': (context) => const RegisterPage(),
+          '/home': (context) => const HomePage(),
+        },
+      ),
+    );
 
-class Loginpg extends StatelessWidget {
+class Loginpg extends StatefulWidget {
   const Loginpg({super.key});
+
+  @override
+  State<Loginpg> createState() => _LoginpgState();
+}
+
+class _LoginpgState extends State<Loginpg> {
+  
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  bool loading = false; 
+
+  // Login function
+  Future<void> loginUser() async {
+  setState(() => loading = true);
+
+  final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
+  final url = Uri.parse("http://$host:8000/login");
+
+  final body = {
+    "email": emailController.text.trim(),
+    "password": passwordController.text.trim(),
+  };
+
+  print("LOGIN BODY => ${jsonEncode(body)}");
+
+  try {
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(body),
+    );
+
+    final data = jsonDecode(response.body);
+    print("LOGIN RESPONSE => $data");
+
+    if (response.statusCode == 200 && data["success"] == true) {
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(data["message"] ?? "Login failed")),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Server error: $e")),
+    );
+  }
+
+  setState(() => loading = false);
+}
+
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Container(
+      body: SingleChildScrollView(
         child: Column(
           children: <Widget>[
             Container(
               height: 400,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 image: DecorationImage(
                   image: AssetImage('assets/images/Demo1.png'),
-                  fit: BoxFit.fill
-                )
+                  fit: BoxFit.fill,
+                ),
               ),
               child: Stack(
                 children: <Widget>[
@@ -38,103 +94,84 @@ class Loginpg extends StatelessWidget {
                     width: 120,
                     height: 150,
                     child: Container(
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         image: DecorationImage(
-                          image: AssetImage('assets/images/light-1.png')
-                          )
+                          image: AssetImage('assets/images/light-1.png'),
+                        ),
                       ),
-                    )
+                    ),
                   ),
                   Positioned(
                     left: 280,
                     width: 120,
                     height: 220,
                     child: Container(
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         image: DecorationImage(
-                          image: AssetImage('assets/images/clock.png')
-                          )
+                          image: AssetImage('assets/images/clock.png'),
+                        ),
                       ),
-                    )
+                    ),
                   ),
                   Positioned(
                     child: Container(
-                      margin: EdgeInsets.only(top: 300),
-                      child: Center(
-                        child: Text("Login", style: TextStyle(color: Colors.black, fontSize: 40, fontWeight: FontWeight.bold),),
+                      margin: const EdgeInsets.only(top: 300),
+                      child: const Center(
+                        child: Text(
+                          "Login",
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 40,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
+
+            // Login Form
             Padding(
-              padding: EdgeInsets.all(30.0),
+              padding: const EdgeInsets.all(30.0),
               child: Column(
                 children: <Widget>[
-                  Container(
-                    padding: EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color.fromRGBO(126, 194, 250, 0.4),
-                          blurRadius: 20.0,
-                          offset: Offset(0, 10)
-                        )
-                      ]
-                    ),
-                    child: Column(
-                      children: <Widget>[
-                        Container(
-                          padding: EdgeInsets.all(8.0),
-                          decoration: BoxDecoration(
-                            border: Border(bottom: BorderSide(color: Colors.grey))
-                          ),
-                          child: TextField(
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: "Email or Username",
-                              hintStyle: TextStyle(color: Colors.grey[400])
-                            ),
-                          ),
+                  _inputBox(emailController, "Email or Username"),
+                  const SizedBox(height: 15),
+                  _inputBox(passwordController, "Password", isPass: true),
+                  const SizedBox(height: 30),
+                  GestureDetector(
+                    onTap: loading ? null : loginUser,
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color.fromRGBO(126, 194, 250, 1),
+                            Color.fromRGBO(126, 194, 250, 0.6),
+                          ],
                         ),
-                        Container(
-                          padding: EdgeInsets.all(8.0),
-                          child: TextField(
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: "Password",
-                              hintStyle: TextStyle(color: Colors.grey[400])
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
+                      child: Center(
+                        child: loading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text(
+                                "Login",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                      ),
                     ),
                   ),
-                  SizedBox(height: 30,),
-                  Container(
-                    height: 50,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      gradient: LinearGradient(
-                        colors: [
-                          Color.fromRGBO(126, 194, 250, 1),
-                          Color.fromRGBO(126, 194, 250, 0.6),
-                        ]
-                      )
-                    ),
-                    child: Center(
-                      child: Text("Login", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),),
-                    ),
-                  ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   GestureDetector(
                     onTap: () {
                       Navigator.pushNamed(context, '/register');
                     },
-                    child: Text(
+                    child: const Text(
                       "Create new account",
                       style: TextStyle(
                         color: Color.fromRGBO(126, 194, 250, 1),
@@ -142,15 +179,45 @@ class Loginpg extends StatelessWidget {
                       ),
                     ),
                   ),
-                  SizedBox(height: 70,),
-                  Text("Forgot Password?", style: TextStyle(color: Color.fromRGBO(126, 194, 250, 1)),),
+                  const SizedBox(height: 70),
+                  const Text(
+                    "Forgot Password?",
+                    style: TextStyle(color: Color.fromRGBO(126, 194, 250, 1)),
+                  ),
                 ],
               ),
             )
           ],
         ),
       ),
+    );
+  }
 
+
+  Widget _inputBox(TextEditingController controller, String hintText,
+      {bool isPass = false}) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: const [
+          BoxShadow(
+            color: Color.fromRGBO(126, 194, 250, 0.4),
+            blurRadius: 20.0,
+            offset: Offset(0, 10),
+          )
+        ],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: isPass,
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          hintText: hintText,
+          hintStyle: TextStyle(color: Colors.grey[400]),
+        ),
+      ),
     );
   }
 }
