@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'notes/upload_notes.dart';
+
 
 void main() {
   runApp(const MyApp());
-  
 }
 
 class MyApp extends StatelessWidget {
@@ -29,43 +30,27 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0;
-
-  final List<String> _titles = [
-    'My Routine',
-    'Others Routine',
-    'Upload Notes',
-    'Browse Notes',
-  ];
+  int selectedPage = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
+        title: const Row(
           children: [
-            Image.asset(
-              "D://Codes//flutter_proj//homepage_demo//assets//logo.png",
-              height: 40,
-              errorBuilder: (context, error, stackTrace) {
-                return const Icon(Icons.school, size: 40);
-              },
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'Academic Life Management',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            Icon(Icons.school, size: 40),
+            SizedBox(width: 12),
+            Text('Academic Hub'),
           ],
         ),
       ),
       body: Row(
         children: [
           NavigationRail(
-            selectedIndex: _selectedIndex,
+            selectedIndex: selectedPage,
             onDestinationSelected: (index) {
               setState(() {
-                _selectedIndex = index;
+                selectedPage = index;
               });
             },
             labelType: NavigationRailLabelType.all,
@@ -83,14 +68,35 @@ class _HomePageState extends State<HomePage> {
                 label: Text('Upload Notes'),
               ),
               NavigationRailDestination(
+                icon: Icon(Icons.description),
+                label: Text('My Notes'),
+              ),
+              NavigationRailDestination(
                 icon: Icon(Icons.library_books),
                 label: Text('Browse Notes'),
               ),
             ],
           ),
           const VerticalDivider(thickness: 1, width: 1),
+          Expanded(
+            child: _showPage(),
+          ),
         ],
       ),
     );
+  }
+
+  Widget _showPage() {
+    if (selectedPage == 0) {
+      return const Center(child: Text('My Routine Page'));
+    } else if (selectedPage == 1) {
+      return const Center(child: Text('Others Routine Page'));
+    } else if (selectedPage == 2) {
+      return const UploadNotesPage();
+      } else if (selectedPage == 3) {
+        return const Center(child: Text('Others Routine Page'));
+      } else {
+        return const Center(child: Text('Others Routine Page'));
+      }
   }
 }
