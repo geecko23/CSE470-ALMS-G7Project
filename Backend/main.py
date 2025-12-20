@@ -5,7 +5,8 @@ from pydantic import BaseModel
 from typing import Optional
 import mysql.connector
 import os
-
+from typing import List
+from pydantic import BaseModel
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -130,3 +131,62 @@ async def upload_note(
             cursor.close()
         if db: 
             db.close()
+
+
+
+
+# CONSULTATIONS BACKEND
+
+# Consultation Pydantic model
+class Consultation(BaseModel):
+    student_id: str
+    course_name: str
+    faculty_name: str
+    time_slot: str
+
+# GET consultations for a specific student (flat list)
+@app.get("/consultations/{student_id}")
+def get_consultations(student_id: str):
+    db = None
+    cursor = None
+    try:
+        db = mysql.connector.connect(
+            host="localhost", user="root", password="123", database="project"
+        )
+        cursor = db.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT course_name, faculty_name, time_slot, status FROM consultations WHERE student_id=%s",
+            (student_id,)
+        )
+        consultations = cursor.fetchall()  # this is already a list of dicts
+        return {"success": True, "consultations": consultations}  # flat list
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()
+
+
+# POST new consultation
+@app.post("/consultations")
+def book_consultation(cons: Consultation):
+    db = None
+    cursor = None
+    try:
+        db = mysql.connector.connect(
+            host="localhost", user="root", password="123", database="project"
+        )
+        cursor = db.cursor()
+        # Insert consultation with default status 'pending'
+        cursor.execute(
+            "INSERT INTO consultations (student_id, course_name, faculty_name, time_slot) VALUES (%s,%s,%s,%s)",
+            (cons.student_id, cons.course_name, cons.faculty_name, cons.time_slot)
+        )
+        db.commit()
+        return {"success": True, "message": "Consultation booked successfully"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()
+

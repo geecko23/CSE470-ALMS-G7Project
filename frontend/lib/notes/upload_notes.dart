@@ -15,14 +15,15 @@ class _UploadNotesPageState extends State<UploadNotesPage> {
   final descriptionController = TextEditingController();
   final userIdController = TextEditingController();
   final courseController = TextEditingController();
-  
+
   File? selectedFile;
   bool uploading = false;
 
+  // Pick a file using FilePicker
   Future<void> pickFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx','jpg','jpeg','png'],
+      allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 'jpg', 'jpeg', 'png'],
     );
 
     if (result != null) {
@@ -32,71 +33,60 @@ class _UploadNotesPageState extends State<UploadNotesPage> {
     }
   }
 
+  // Upload note to backend
   Future<void> uploadNote() async {
-    if (titleController.text.isEmpty) {
+    if (titleController.text.isEmpty ||
+        courseController.text.isEmpty ||
+        userIdController.text.isEmpty ||
+        selectedFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter title')),
-      );
-      return;
-    }
-    
-    if (courseController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter course')),
-      );
-      return;
-    }
-    
-    if (userIdController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your user ID')),
-      );
-      return;
-    }
-    
-    if (selectedFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a file')),
+        const SnackBar(content: Text('Please fill all fields and select a file')),
       );
       return;
     }
 
-    setState(() {
-      uploading = true;
-    });
+    setState(() => uploading = true);
 
-    var request = http.MultipartRequest(
-      'POST',
-      Uri.parse('http://10.0.2.2:8000/api/notes/upload'),
-    );
+    // Handle Android emulator vs iOS/desktop host
+    final host = Platform.isAndroid ? '10.0.2.2' : '127.0.0.1';
+    final url = Uri.parse('http://$host:8000/api/notes/upload');
 
-    request.fields['title'] = titleController.text;
-    request.fields['description'] = descriptionController.text;
-    request.fields['course'] = courseController.text;
-    request.fields['uploader_id'] = userIdController.text;
+    var request = http.MultipartRequest('POST', url);
+
+    // Add fields
+    request.fields['title'] = titleController.text.trim();
+    request.fields['description'] = descriptionController.text.trim();
+    request.fields['course'] = courseController.text.trim();
+    request.fields['uploader_id'] = userIdController.text.trim();
+
+    // Add file
     request.files.add(await http.MultipartFile.fromPath('file', selectedFile!.path));
 
-    var response = await request.send();
+    try {
+      var response = await request.send();
+      final responseData = await http.Response.fromStream(response);
 
-    setState(() {
-      uploading = false;
-    });
-
-    if (response.statusCode == 200) {
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Note uploaded successfully!')),
+        );
+        // Clear form
+        titleController.clear();
+        descriptionController.clear();
+        courseController.clear();
+        userIdController.clear();
+        setState(() => selectedFile = null);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: ${responseData.body}')),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Note uploaded!')),
+        SnackBar(content: Text('Server error: $e')),
       );
-      titleController.clear();
-      descriptionController.clear();
-      userIdController.clear();
-      courseController.clear();
-      setState(() {
-        selectedFile = null;
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Upload failed')),
-      );
+    } finally {
+      setState(() => uploading = false);
     }
   }
 
@@ -116,38 +106,13 @@ class _UploadNotesPageState extends State<UploadNotesPage> {
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Title',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+              _inputField(titleController, 'Title'),
               const SizedBox(height: 15),
-              TextField(
-                controller: descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-              ),
+              _inputField(descriptionController, 'Description', maxLines: 3),
               const SizedBox(height: 15),
-              TextField(
-                controller: courseController,
-                decoration: const InputDecoration(
-                  labelText: 'Course (e.g., CSE 101, PHY 201)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+              _inputField(courseController, 'Course (e.g., CSE 101, PHY 201)'),
               const SizedBox(height: 15),
-              TextField(
-                controller: userIdController,
-                decoration: const InputDecoration(
-                  labelText: 'Your User ID',
-                  border: OutlineInputBorder(),
-                ),
-              ),
+              _inputField(userIdController, 'Your User ID'),
               const SizedBox(height: 20),
               OutlinedButton.icon(
                 onPressed: pickFile,
@@ -168,12 +133,24 @@ class _UploadNotesPageState extends State<UploadNotesPage> {
                   padding: const EdgeInsets.all(15),
                 ),
                 child: uploading
-                    ? const Text('Uploading...')
+                    ? const CircularProgressIndicator(color: Colors.white)
                     : const Text('Upload Note'),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _inputField(TextEditingController controller, String label,
+      {int maxLines = 1}) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
       ),
     );
   }

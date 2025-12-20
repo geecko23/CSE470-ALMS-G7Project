@@ -12,7 +12,7 @@ void main() => runApp(
         routes: {
           '/login': (context) => const Loginpg(),
           '/register': (context) => const RegisterPage(),
-          '/home': (context) => const HomePage(),
+          // '/home': (context) => const HomePage(),
         },
       ),
     );
@@ -56,7 +56,13 @@ class _LoginpgState extends State<Loginpg> {
     print("LOGIN RESPONSE => $data");
 
     if (response.statusCode == 200 && data["success"] == true) {
-      Navigator.pushReplacementNamed(context, '/home');
+      String studentId = data["user"]["user_id"];
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HomePage(studentId: studentId),
+        ),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(data["message"] ?? "Login failed")),

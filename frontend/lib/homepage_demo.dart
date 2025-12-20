@@ -1,29 +1,10 @@
 import 'package:flutter/material.dart';
+import 'consultations_page.dart';
 import 'notes/upload_notes.dart';
 
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Academic Hub',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
-      home: const HomePage(),
-    );
-  }
-}
-
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final String studentId; // receive logged-in student ID
+  const HomePage({super.key, required this.studentId});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -75,6 +56,10 @@ class _HomePageState extends State<HomePage> {
                 icon: Icon(Icons.library_books),
                 label: Text('Browse Notes'),
               ),
+              NavigationRailDestination(
+                icon: Icon(Icons.access_time),
+                label: Text('Consultations'),
+              ),
             ],
           ),
           const VerticalDivider(thickness: 1, width: 1),
@@ -87,16 +72,21 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _showPage() {
-    if (selectedPage == 0) {
-      return const Center(child: Text('My Routine Page'));
-    } else if (selectedPage == 1) {
-      return const Center(child: Text('Others Routine Page'));
-    } else if (selectedPage == 2) {
-      return const UploadNotesPage();
-      } else if (selectedPage == 3) {
+    switch (selectedPage) {
+      case 0:
+        return const Center(child: Text('My Routine Page'));
+      case 1:
         return const Center(child: Text('Others Routine Page'));
-      } else {
-        return const Center(child: Text('Others Routine Page'));
-      }
+      case 2:
+        return const UploadNotesPage();
+      case 3:
+        return const Center(child: Text('My Notes Page'));
+      case 4:
+        return const Center(child: Text('Browse Notes Page'));
+      case 5:
+        return ConsultationsPage(studentId: widget.studentId); // Pass studentId
+      default:
+        return const Center(child: Text('Page not found'));
+    }
   }
 }
