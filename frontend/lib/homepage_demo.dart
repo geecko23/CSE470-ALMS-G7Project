@@ -79,7 +79,7 @@ class _HomePageState extends State<HomePage> {
       case 1:
         return const Center(child: Text('Others Routine Page'));
       case 2:
-        return const UploadNotesPage();
+        return UploadNotesPage(studentId: widget.studentId);
       case 3:
         return MyNotesPage(studentId: widget.studentId);
       case 4:
