@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'consultations_page.dart';
 import 'notes/upload_notes.dart';
+import 'notes/mynotes.dart';
 
 class HomePage extends StatefulWidget {
   final String studentId; // receive logged-in student ID
@@ -80,7 +81,7 @@ class _HomePageState extends State<HomePage> {
       case 2:
         return const UploadNotesPage();
       case 3:
-        return const Center(child: Text('My Notes Page'));
+        return MyNotesPage(studentId: widget.studentId);
       case 4:
         return const Center(child: Text('Browse Notes Page'));
       case 5:

@@ -190,3 +190,23 @@ def book_consultation(cons: Consultation):
         if cursor: cursor.close()
         if db: db.close()
 
+@app.get("/api/notes/user/{uploader_id}")
+def get_user_notes(uploader_id: str):
+    db = None
+    cursor = None
+    try:
+        db = mysql.connector.connect(
+            host="localhost", user="root", password="123", database="project"
+        )
+        cursor = db.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT id, title, description, course, filename, file_size, upload_date FROM notes WHERE uploader_id=%s ORDER BY upload_date DESC",
+            (uploader_id,)
+        )
+        notes = cursor.fetchall()
+        return {"success": True, "notes": notes}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()
