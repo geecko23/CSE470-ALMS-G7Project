@@ -210,3 +210,32 @@ def get_user_notes(uploader_id: str):
     finally:
         if cursor: cursor.close()
         if db: db.close()
+
+@app.get("/api/notes/all")
+def get_all_notes():
+    db = None
+    cursor = None
+    try:
+        db = mysql.connector.connect(
+            host="localhost", user="root", password="123", database="project"
+        )
+        cursor = db.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT n.id, n.title, n.description, n.course, n.filename, n.file_size, n.upload_date, u.name as uploader_name FROM notes n JOIN users u ON n.uploader_id = u.user_id ORDER BY n.upload_date DESC"
+        )
+        notes = cursor.fetchall()
+        return {"success": True, "notes": notes}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()
+
+# Download/view note file
+@app.get("/api/notes/download/{filename}")
+def download_note(filename: str):
+    from fastapi.responses import FileResponse
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if os.path.exists(file_path):
+        return FileResponse(file_path, filename=filename)
+    return json_error("File not found", 404)

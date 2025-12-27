@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'consultations_page.dart';
 import 'notes/upload_notes.dart';
 import 'notes/mynotes.dart';
+import 'notes/browse_notes.dart';
 
 class HomePage extends StatefulWidget {
-  final String studentId; // receive logged-in student ID
+  final String studentId; 
   const HomePage({super.key, required this.studentId});
 
   @override
@@ -83,7 +84,7 @@ class _HomePageState extends State<HomePage> {
       case 3:
         return MyNotesPage(studentId: widget.studentId);
       case 4:
-        return const Center(child: Text('Browse Notes Page'));
+        return const BrowseNotesPage();
       case 5:
         return ConsultationsPage(studentId: widget.studentId); // Pass studentId
       default:
