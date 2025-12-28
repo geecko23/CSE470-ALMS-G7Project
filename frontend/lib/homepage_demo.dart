@@ -3,13 +3,10 @@ import 'consultations_page.dart';
 import 'notes/upload_notes.dart';
 import 'notes/mynotes.dart';
 import 'notes/browse_notes.dart';
+import 'notes/file_viewer_page.dart';
 
 class HomePage extends StatefulWidget {
-<<<<<<< HEAD
   final String studentId; // logged-in student ID
-=======
-  final String studentId; 
->>>>>>> 32f4275fb502d7dc3e3a215f213ed38d315de3df
   const HomePage({super.key, required this.studentId});
 
   @override
@@ -110,11 +107,11 @@ class _HomePageState extends State<HomePage> {
       case 1:
         return const Center(child: Text('Others Routine Page'));
       case 2:
-        return UploadNotesPage(studentId: widget.studentId);
+        return const UploadNotesPage(studentId: widget.studentId);
       case 3:
-        return MyNotesPage(studentId: widget.studentId);
+        return const Center(child: Text('My Notes Page'));
       case 4:
-        return const BrowseNotesPage();
+        return const Center(child: Text('Browse Notes Page'));
       case 5:
         return ConsultationsPage(studentId: widget.studentId);
       default:
