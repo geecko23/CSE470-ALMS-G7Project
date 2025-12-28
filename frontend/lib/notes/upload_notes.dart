@@ -4,7 +4,8 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 
 class UploadNotesPage extends StatefulWidget {
-  const UploadNotesPage({super.key});
+  final String studentId;
+  const UploadNotesPage({super.key, required this.studentId});
 
   @override
   State<UploadNotesPage> createState() => _UploadNotesPageState();
@@ -13,7 +14,6 @@ class UploadNotesPage extends StatefulWidget {
 class _UploadNotesPageState extends State<UploadNotesPage> {
   final titleController = TextEditingController();
   final descriptionController = TextEditingController();
-  final userIdController = TextEditingController();
   final courseController = TextEditingController();
 
   File? selectedFile;
@@ -32,12 +32,10 @@ class _UploadNotesPageState extends State<UploadNotesPage> {
       });
     }
   }
-
-  // Upload note to backend
+  // Upload the selected file along with metadata to the server
   Future<void> uploadNote() async {
     if (titleController.text.isEmpty ||
         courseController.text.isEmpty ||
-        userIdController.text.isEmpty ||
         selectedFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill all fields and select a file')),
@@ -47,19 +45,18 @@ class _UploadNotesPageState extends State<UploadNotesPage> {
 
     setState(() => uploading = true);
 
-    // Handle Android emulator vs iOS/desktop host
     final host = Platform.isAndroid ? '10.0.2.2' : '127.0.0.1';
     final url = Uri.parse('http://$host:8000/api/notes/upload');
 
     var request = http.MultipartRequest('POST', url);
 
-    // Add fields
+
     request.fields['title'] = titleController.text.trim();
     request.fields['description'] = descriptionController.text.trim();
     request.fields['course'] = courseController.text.trim();
-    request.fields['uploader_id'] = userIdController.text.trim();
+    request.fields['uploader_id'] = widget.studentId;
 
-    // Add file
+
     request.files.add(await http.MultipartFile.fromPath('file', selectedFile!.path));
 
     try {
@@ -70,11 +67,10 @@ class _UploadNotesPageState extends State<UploadNotesPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Note uploaded successfully!')),
         );
-        // Clear form
+
         titleController.clear();
         descriptionController.clear();
         courseController.clear();
-        userIdController.clear();
         setState(() => selectedFile = null);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -112,8 +108,6 @@ class _UploadNotesPageState extends State<UploadNotesPage> {
               const SizedBox(height: 15),
               _inputField(courseController, 'Course (e.g., CSE 101, PHY 201)'),
               const SizedBox(height: 15),
-              _inputField(userIdController, 'Your User ID'),
-              const SizedBox(height: 20),
               OutlinedButton.icon(
                 onPressed: pickFile,
                 icon: const Icon(Icons.attach_file),
