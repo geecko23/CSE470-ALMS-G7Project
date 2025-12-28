@@ -13,24 +13,28 @@ class ConsultationsPage extends StatefulWidget {
 
 class _ConsultationsPageState extends State<ConsultationsPage> {
   List consultations = [];
+  List<String> faculties = [];
+  String? selectedFaculty;
+
   bool loading = false;
 
-  // Form controllers for booking new consultation
   final TextEditingController courseController = TextEditingController();
-  final TextEditingController facultyController = TextEditingController();
   final TextEditingController timeSlotController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     fetchConsultations();
+    fetchFaculties();
   }
 
+  // ================= FETCH CONSULTATIONS =================
   Future<void> fetchConsultations() async {
     setState(() => loading = true);
 
     final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
-    final url = Uri.parse("http://$host:8000/consultations/${widget.studentId}");
+    final url =
+        Uri.parse("http://$host:8000/consultations/${widget.studentId}");
 
     try {
       final response = await http.get(url);
@@ -40,28 +44,53 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
         setState(() {
           consultations = data['consultations'];
         });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['error'] ?? "Failed to fetch consultations")),
-        );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Server error: $e")),
-      );
+      debugPrint("Consultation error: $e");
     }
 
     setState(() => loading = false);
   }
 
+  // ================= FETCH FACULTIES =================
+  Future<void> fetchFaculties() async {
+    final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
+    final url = Uri.parse("http://$host:8000/faculties");
+
+    try {
+      final response = await http.get(url);
+      final data = jsonDecode(response.body);
+
+      if (data['success'] == true) {
+        setState(() {
+          faculties = List<String>.from(
+            data['faculties'].map((f) => f['f_initial']),
+          );
+        });
+      }
+    } catch (e) {
+      debugPrint("Faculty fetch error: $e");
+    }
+  }
+
+  // ================= BOOK CONSULTATION =================
   Future<void> bookConsultation() async {
+    if (selectedFaculty == null ||
+        courseController.text.isEmpty ||
+        timeSlotController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Fill all fields")),
+      );
+      return;
+    }
+
     final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
     final url = Uri.parse("http://$host:8000/consultations");
 
     final body = {
       "student_id": widget.studentId,
       "course_name": courseController.text.trim(),
-      "faculty_name": facultyController.text.trim(),
+      "faculty_name": selectedFaculty,
       "time_slot": timeSlotController.text.trim(),
     };
 
@@ -75,49 +104,58 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
       final data = jsonDecode(response.body);
 
       if (data['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Consultation booked successfully")),
-        );
-        courseController.clear();
-        facultyController.clear();
-        timeSlotController.clear();
-        fetchConsultations(); // refresh list
-        Navigator.pop(context); // close booking modal
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['error'] ?? "Booking failed")),
-        );
+        Navigator.pop(context);
+        fetchConsultations();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Server error: $e")),
-      );
+      debugPrint("Booking error: $e");
     }
   }
 
+  // ================= BOOKING DIALOG =================
   void showBookingDialog() {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (_) {
         return AlertDialog(
-          title: const Text("Book New Consultation"),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  controller: courseController,
-                  decoration: const InputDecoration(labelText: "Course Name"),
+          title: const Text("Book Consultation"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: courseController,
+                decoration: const InputDecoration(labelText: "Course Name"),
+              ),
+              const SizedBox(height: 12),
+
+              // ✅ WORKING DROPDOWN
+              DropdownButtonFormField<String>(
+                value: selectedFaculty,
+                items: faculties
+                    .map(
+                      (f) => DropdownMenuItem(
+                        value: f,
+                        child: Text(f),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedFaculty = value;
+                  });
+                },
+                decoration: const InputDecoration(
+                  labelText: "Faculty Initial",
+                  border: OutlineInputBorder(),
                 ),
-                TextField(
-                  controller: facultyController,
-                  decoration: const InputDecoration(labelText: "Faculty Name"),
-                ),
-                TextField(
-                  controller: timeSlotController,
-                  decoration: const InputDecoration(labelText: "Time Slot"),
-                ),
-              ],
-            ),
+              ),
+
+              const SizedBox(height: 12),
+              TextField(
+                controller: timeSlotController,
+                decoration: const InputDecoration(labelText: "Time Slot"),
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -134,58 +172,54 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
     );
   }
 
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Consultations")),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : consultations.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        "No Consultations Pending",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: showBookingDialog,
-                        child: const Text("Book Consultation"),
-                      ),
-                    ],
-                  ),
-                )
-              : Column(
-                  children: [
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: consultations.length,
-                        itemBuilder: (context, index) {
-                          final c = consultations[index];
-                          return ListTile(
-                            title: Text("${c['course_name']} - ${c['faculty_name']}"),
-                            subtitle: Text(c['time_slot']),
-                            trailing: Text(
-                              c['status'],
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: ElevatedButton(
-                        onPressed: showBookingDialog,
-                        child: const Text("Book Consultation"),
-                      ),
-                    ),
-                  ],
+    if (loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return consultations.isEmpty
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text("No Consultations Pending"),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: showBookingDialog,
+                  child: const Text("Book Consultation"),
                 ),
-    );
+              ],
+            ),
+          )
+        : Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  itemCount: consultations.length,
+                  itemBuilder: (_, index) {
+                    final c = consultations[index];
+                    return ListTile(
+                      title:
+                          Text("${c['course_name']} - ${c['faculty_name']}"),
+                      subtitle: Text(c['time_slot']),
+                      trailing: Text(
+                        c['status'],
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ElevatedButton(
+                  onPressed: showBookingDialog,
+                  child: const Text("Book Consultation"),
+                ),
+              ),
+            ],
+          );
   }
 }

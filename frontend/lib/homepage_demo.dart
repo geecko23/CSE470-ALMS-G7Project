@@ -3,7 +3,7 @@ import 'consultations_page.dart';
 import 'notes/upload_notes.dart';
 
 class HomePage extends StatefulWidget {
-  final String studentId; // receive logged-in student ID
+  final String studentId; // logged-in student ID
   const HomePage({super.key, required this.studentId});
 
   @override
@@ -12,6 +12,15 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int selectedPage = 0;
+
+  void logout() {
+    // Remove all previous routes and go back to login page
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/login',
+      (route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +70,23 @@ class _HomePageState extends State<HomePage> {
                 label: Text('Consultations'),
               ),
             ],
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const Divider(),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: IconButton(
+                    tooltip: 'Logout',
+                    icon: const Icon(
+                      Icons.logout,
+                      color: Colors.red,
+                    ),
+                    onPressed: logout,
+                  ),
+                ),
+              ],
+            ),
           ),
           const VerticalDivider(thickness: 1, width: 1),
           Expanded(
@@ -84,7 +110,7 @@ class _HomePageState extends State<HomePage> {
       case 4:
         return const Center(child: Text('Browse Notes Page'));
       case 5:
-        return ConsultationsPage(studentId: widget.studentId); // Pass studentId
+        return ConsultationsPage(studentId: widget.studentId);
       default:
         return const Center(child: Text('Page not found'));
     }
