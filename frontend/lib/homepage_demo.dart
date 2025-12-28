@@ -3,7 +3,7 @@ import 'consultations_page.dart';
 import 'notes/upload_notes.dart';
 import 'notes/mynotes.dart';
 import 'notes/browse_notes.dart';
-import 'notes/file_viewer_page.dart';
+
 
 class HomePage extends StatefulWidget {
   final String studentId; // logged-in student ID
@@ -107,15 +107,15 @@ class _HomePageState extends State<HomePage> {
       case 1:
         return const Center(child: Text('Others Routine Page'));
       case 2:
-        return const UploadNotesPage(studentId: widget.studentId);
+        return UploadNotesPage(studentId: widget.studentId);
       case 3:
-        return const Center(child: Text('My Notes Page'));
+        return MyNotesPage(studentId: widget.studentId);
       case 4:
-        return const Center(child: Text('Browse Notes Page'));
+        return const BrowseNotesPage();
       case 5:
         return ConsultationsPage(studentId: widget.studentId);
       default:
-        return const Center(child: Text('Page not found'));
+        return const Center(child: Text('Page not found')); 
     }
   }
 }
