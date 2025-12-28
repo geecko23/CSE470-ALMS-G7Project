@@ -105,6 +105,11 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
 
       if (data['success'] == true) {
         Navigator.pop(context);
+        courseController.clear();
+        timeSlotController.clear();
+        setState(() {
+          selectedFaculty = null;
+        });
         fetchConsultations();
       }
     } catch (e) {
@@ -128,7 +133,6 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
               ),
               const SizedBox(height: 12),
 
-              // ✅ WORKING DROPDOWN
               DropdownButtonFormField<String>(
                 value: selectedFaculty,
                 items: faculties
@@ -164,6 +168,9 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
             ),
             ElevatedButton(
               onPressed: bookConsultation,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromRGBO(126, 194, 250, 1),
+              ),
               child: const Text("Book"),
             ),
           ],
@@ -184,42 +191,118 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text("No Consultations Pending"),
+                const Text(
+                  "No Consultations Pending",
+                  style: TextStyle(fontSize: 18),
+                ),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: showBookingDialog,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromRGBO(126, 194, 250, 1),
+                  ),
                   child: const Text("Book Consultation"),
                 ),
               ],
             ),
           )
-        : Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: consultations.length,
-                  itemBuilder: (_, index) {
-                    final c = consultations[index];
-                    return ListTile(
-                      title:
-                          Text("${c['course_name']} - ${c['faculty_name']}"),
-                      subtitle: Text(c['time_slot']),
-                      trailing: Text(
-                        c['status'],
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    );
-                  },
+        : Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: consultations.length,
+                    itemBuilder: (_, index) {
+                      final c = consultations[index];
+                      return Container(
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color.fromRGBO(126, 194, 250, 1),
+                              Color.fromRGBO(126, 194, 250, 0.6),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      c['course_name'],
+                                      style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 4, horizontal: 8),
+                                    decoration: BoxDecoration(
+                                      color: c['status'] == 'available'
+                                          ? Colors.green[200]
+                                          : Colors.orange[200],
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      c['status'],
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Faculty: ${c['faculty_name']}",
+                                style: const TextStyle(
+                                    fontSize: 16, color: Colors.white),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Time Slot: ${c['time_slot']}",
+                                style: const TextStyle(
+                                    fontSize: 16, color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: ElevatedButton(
-                  onPressed: showBookingDialog,
-                  child: const Text("Book Consultation"),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12.0),
+                  child: ElevatedButton(
+                    onPressed: showBookingDialog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          const Color.fromARGB(255, 198, 205, 245),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 16, horizontal: 24),
+                    ),
+                    child: const Text(
+                      "Book Consultation",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
   }
 }
