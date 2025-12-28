@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class ConsultationsPage extends StatefulWidget {
-  final String studentId;
+  final String studentId; // for students, faculty ID also works
   const ConsultationsPage({super.key, required this.studentId});
 
   @override
@@ -12,11 +12,12 @@ class ConsultationsPage extends StatefulWidget {
 }
 
 class _ConsultationsPageState extends State<ConsultationsPage> {
+  bool loading = true;
+  bool isFaculty = false;
+  String? facultyInitial;
   List consultations = [];
   List<String> faculties = [];
   String? selectedFaculty;
-
-  bool loading = false;
 
   final TextEditingController courseController = TextEditingController();
   final TextEditingController timeSlotController = TextEditingController();
@@ -24,35 +25,37 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
   @override
   void initState() {
     super.initState();
-    fetchConsultations();
+    checkUserType();
     fetchFaculties();
   }
 
-  // ================= FETCH CONSULTATIONS =================
-  Future<void> fetchConsultations() async {
-    setState(() => loading = true);
-
+  // =================== CHECK USER TYPE ===================
+  Future<void> checkUserType() async {
     final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
-    final url =
-        Uri.parse("http://$host:8000/consultations/${widget.studentId}");
+    final url = Uri.parse("http://$host:8000/faculty/${widget.studentId}");
 
     try {
       final response = await http.get(url);
       final data = jsonDecode(response.body);
-
       if (data['success'] == true) {
         setState(() {
-          consultations = data['consultations'];
+          isFaculty = true;
+          facultyInitial = data['faculty']['f_initial'];
         });
+        fetchFacultyConsultations();
+      } else {
+        // student
+        setState(() {
+          isFaculty = false;
+        });
+        fetchStudentConsultations();
       }
     } catch (e) {
-      debugPrint("Consultation error: $e");
+      debugPrint("User type check error: $e");
     }
-
-    setState(() => loading = false);
   }
 
-  // ================= FETCH FACULTIES =================
+  // =================== FETCH FACULTIES ===================
   Future<void> fetchFaculties() async {
     final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
     final url = Uri.parse("http://$host:8000/faculties");
@@ -60,7 +63,6 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
     try {
       final response = await http.get(url);
       final data = jsonDecode(response.body);
-
       if (data['success'] == true) {
         setState(() {
           faculties = List<String>.from(
@@ -73,11 +75,50 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
     }
   }
 
-  // ================= BOOK CONSULTATION =================
+  // =================== FETCH CONSULTATIONS ===================
+  Future<void> fetchStudentConsultations() async {
+    setState(() => loading = true);
+    final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
+    final url = Uri.parse("http://$host:8000/consultations/${widget.studentId}");
+
+    try {
+      final response = await http.get(url);
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        setState(() {
+          consultations = data['consultations'];
+        });
+      }
+    } catch (e) {
+      debugPrint("Student consultation error: $e");
+    }
+    setState(() => loading = false);
+  }
+
+  Future<void> fetchFacultyConsultations() async {
+    setState(() => loading = true);
+    if (facultyInitial == null) return;
+
+    final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
+    final url = Uri.parse("http://$host:8000/consultations/faculty/$facultyInitial");
+
+    try {
+      final response = await http.get(url);
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        setState(() {
+          consultations = data['consultations'];
+        });
+      }
+    } catch (e) {
+      debugPrint("Faculty consultation error: $e");
+    }
+    setState(() => loading = false);
+  }
+
+  // =================== BOOK CONSULTATION (STUDENTS ONLY) ===================
   Future<void> bookConsultation() async {
-    if (selectedFaculty == null ||
-        courseController.text.isEmpty ||
-        timeSlotController.text.isEmpty) {
+    if (selectedFaculty == null || courseController.text.isEmpty || timeSlotController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Fill all fields")),
       );
@@ -86,7 +127,6 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
 
     final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
     final url = Uri.parse("http://$host:8000/consultations");
-
     final body = {
       "student_id": widget.studentId,
       "course_name": courseController.text.trim(),
@@ -95,214 +135,198 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
     };
 
     try {
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(body),
-      );
-
+      final response = await http.post(url, headers: {"Content-Type": "application/json"}, body: jsonEncode(body));
       final data = jsonDecode(response.body);
-
       if (data['success'] == true) {
         Navigator.pop(context);
+        fetchStudentConsultations();
         courseController.clear();
         timeSlotController.clear();
-        setState(() {
-          selectedFaculty = null;
-        });
-        fetchConsultations();
+        selectedFaculty = null;
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['error'] ?? "Booking failed")));
       }
     } catch (e) {
       debugPrint("Booking error: $e");
     }
   }
 
-  // ================= BOOKING DIALOG =================
   void showBookingDialog() {
     showDialog(
       context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: const Text("Book Consultation"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: courseController,
-                decoration: const InputDecoration(labelText: "Course Name"),
-              ),
-              const SizedBox(height: 12),
-
-              DropdownButtonFormField<String>(
-                value: selectedFaculty,
-                items: faculties
-                    .map(
-                      (f) => DropdownMenuItem(
-                        value: f,
-                        child: Text(f),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    selectedFaculty = value;
-                  });
-                },
-                decoration: const InputDecoration(
-                  labelText: "Faculty Initial",
-                  border: OutlineInputBorder(),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-              TextField(
-                controller: timeSlotController,
-                decoration: const InputDecoration(labelText: "Time Slot"),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
+      builder: (_) => AlertDialog(
+        title: const Text("Book Consultation"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: courseController,
+              decoration: const InputDecoration(labelText: "Course Name"),
             ),
-            ElevatedButton(
-              onPressed: bookConsultation,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromRGBO(126, 194, 250, 1),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: selectedFaculty,
+              items: faculties.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
+              onChanged: (value) => setState(() => selectedFaculty = value),
+              decoration: const InputDecoration(
+                labelText: "Faculty Initial",
+                border: OutlineInputBorder(),
               ),
-              child: const Text("Book"),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: timeSlotController,
+              decoration: const InputDecoration(labelText: "Time Slot"),
             ),
           ],
-        );
-      },
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color.fromRGBO(126, 194, 250, 1),
+            ),
+            onPressed: bookConsultation,
+            child: const Text("Book"),
+          ),
+        ],
+      ),
     );
   }
 
-  // ================= UI =================
+  // =================== UPDATE STATUS (FACULTY ONLY) ===================
+  Future<void> updateStatus(int consultationId, String newStatus) async {
+    final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
+    final url = Uri.parse("http://$host:8000/consultations/update_status?consultation_id=$consultationId&status=$newStatus");
+
+    try {
+      final response = await http.put(url);
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        fetchFacultyConsultations();
+      }
+    } catch (e) {
+      debugPrint("Update status error: $e");
+    }
+  }
+
+  Color getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case "accepted":
+        return Colors.green;
+      case "pending":
+        return Colors.orange;
+      case "declined":
+        return Colors.red;
+      case "completed":
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    if (loading) return const Center(child: CircularProgressIndicator());
 
-    return consultations.isEmpty
-        ? Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  "No Consultations Pending",
-                  style: TextStyle(fontSize: 18),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: showBookingDialog,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromRGBO(126, 194, 250, 1),
-                  ),
-                  child: const Text("Book Consultation"),
-                ),
-              ],
-            ),
-          )
-        : Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: consultations.length,
-                    itemBuilder: (_, index) {
-                      final c = consultations[index];
-                      return Container(
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color.fromRGBO(126, 194, 250, 1),
-                              Color.fromRGBO(126, 194, 250, 0.6),
-                            ],
+    return Column(
+      children: [
+        Expanded(
+          child: consultations.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text("No Consultations Pending"),
+                      if (!isFaculty)
+                        const SizedBox(height: 20),
+                      if (!isFaculty)
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color.fromRGBO(126, 194, 250, 1),
                           ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 4,
-                              offset: Offset(0, 2),
-                            ),
+                          onPressed: showBookingDialog,
+                          child: const Text("Book Consultation"),
+                        ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: consultations.length,
+                  itemBuilder: (_, index) {
+                    final c = consultations[index];
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color.fromRGBO(126, 194, 250, 1),
+                            Color.fromRGBO(126, 194, 250, 0.6),
                           ],
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 6,
+                            offset: Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("${c['course_name']} - ${c['faculty_name']}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          Text("Time: ${c['time_slot']}"),
+                          const SizedBox(height: 8),
+                          Row(
                             children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      c['course_name'],
-                                      style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 4, horizontal: 8),
-                                    decoration: BoxDecoration(
-                                      color: c['status'] == 'available'
-                                          ? Colors.green[200]
-                                          : Colors.orange[200],
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
+                              const Text("Status: "),
+                              isFaculty
+                                  ? DropdownButton<String>(
+                                      value: c['status'],
+                                      items: ["pending", "accepted", "declined", "completed"]
+                                          .map((s) => DropdownMenuItem(
+                                                value: s,
+                                                child: Text(
+                                                  s,
+                                                  style: TextStyle(color: getStatusColor(s)),
+                                                ),
+                                              ))
+                                          .toList(),
+                                      onChanged: (value) {
+                                        if (value != null) updateStatus(c['id'], value);
+                                      },
+                                    )
+                                  : Text(
                                       c['status'],
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: getStatusColor(c['status']),
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Faculty: ${c['faculty_name']}",
-                                style: const TextStyle(
-                                    fontSize: 16, color: Colors.white),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                "Time Slot: ${c['time_slot']}",
-                                style: const TextStyle(
-                                    fontSize: 16, color: Colors.white),
-                              ),
                             ],
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12.0),
-                  child: ElevatedButton(
-                    onPressed: showBookingDialog,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          const Color.fromARGB(255, 198, 205, 245),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 16, horizontal: 24),
-                    ),
-                    child: const Text(
-                      "Book Consultation",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-              ],
+        ),
+        if (!isFaculty && consultations.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromRGBO(126, 194, 250, 1),
+              ),
+              onPressed: showBookingDialog,
+              child: const Text("Book Consultation"),
             ),
-          );
+          ),
+      ],
+    );
   }
 }

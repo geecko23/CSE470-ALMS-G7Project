@@ -4,9 +4,8 @@ import 'notes/upload_notes.dart';
 import 'notes/mynotes.dart';
 import 'notes/browse_notes.dart';
 
-
 class HomePage extends StatefulWidget {
-  final String studentId; // logged-in student ID
+  final String studentId; // logged-in user ID (student or faculty)
   const HomePage({super.key, required this.studentId});
 
   @override
@@ -17,12 +16,7 @@ class _HomePageState extends State<HomePage> {
   int selectedPage = 0;
 
   void logout() {
-    // Remove all previous routes and go back to login page
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/login',
-      (route) => false,
-    );
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
   @override
@@ -41,11 +35,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           NavigationRail(
             selectedIndex: selectedPage,
-            onDestinationSelected: (index) {
-              setState(() {
-                selectedPage = index;
-              });
-            },
+            onDestinationSelected: (index) => setState(() => selectedPage = index),
             labelType: NavigationRailLabelType.all,
             destinations: const [
               NavigationRailDestination(
@@ -92,9 +82,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           const VerticalDivider(thickness: 1, width: 1),
-          Expanded(
-            child: _showPage(),
-          ),
+          Expanded(child: _showPage()),
         ],
       ),
     );
@@ -113,9 +101,9 @@ class _HomePageState extends State<HomePage> {
       case 4:
         return const BrowseNotesPage();
       case 5:
-        return ConsultationsPage(studentId: widget.studentId);
+        return ConsultationsPage(studentId: widget.studentId); // studentId works for faculty too
       default:
-        return const Center(child: Text('Page not found')); 
+        return const Center(child: Text('Page not found'));
     }
   }
 }

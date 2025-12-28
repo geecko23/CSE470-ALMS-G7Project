@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'register_page.dart';
 import 'homepage_demo.dart';
+import 'package:http/http.dart' as http;
 
 void main() => runApp(
       MaterialApp(
@@ -12,7 +12,6 @@ void main() => runApp(
         routes: {
           '/login': (context) => const Loginpg(),
           '/register': (context) => const RegisterPage(),
-          // '/home': (context) => const HomePage(),
         },
       ),
     );
@@ -25,59 +24,44 @@ class Loginpg extends StatefulWidget {
 }
 
 class _LoginpgState extends State<Loginpg> {
-  
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  bool loading = false;
 
-  bool loading = false; 
-
-  // Login function
   Future<void> loginUser() async {
-  setState(() => loading = true);
+    setState(() => loading = true);
+    final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
+    final url = Uri.parse("http://$host:8000/login");
 
-  final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
-  final url = Uri.parse("http://$host:8000/login");
+    final body = {
+      "email": emailController.text.trim(),
+      "password": passwordController.text.trim(),
+    };
 
-  final body = {
-    "email": emailController.text.trim(),
-    "password": passwordController.text.trim(),
-  };
+    try {
+      final response = await http.post(url, headers: {"Content-Type": "application/json"}, body: jsonEncode(body));
+      final data = jsonDecode(response.body);
 
-  print("LOGIN BODY => ${jsonEncode(body)}");
-
-  try {
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode(body),
-    );
-
-    final data = jsonDecode(response.body);
-    print("LOGIN RESPONSE => $data");
-
-    if (response.statusCode == 200 && data["success"] == true) {
-      String studentId = data["user"]["user_id"];
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HomePage(studentId: studentId),
-        ),
-      );
-    } else {
+      if (response.statusCode == 200 && data["success"] == true) {
+        String studentId = data["user"]["user_id"];
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomePage(studentId: studentId),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data["message"] ?? "Login failed")),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(data["message"] ?? "Login failed")),
+        SnackBar(content: Text("Server error: $e")),
       );
     }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Server error: $e")),
-    );
+    setState(() => loading = false);
   }
-
-  setState(() => loading = false);
-}
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -137,8 +121,6 @@ class _LoginpgState extends State<Loginpg> {
                 ],
               ),
             ),
-
-            // Login Form
             Padding(
               padding: const EdgeInsets.all(30.0),
               child: Column(
@@ -199,9 +181,7 @@ class _LoginpgState extends State<Loginpg> {
     );
   }
 
-
-  Widget _inputBox(TextEditingController controller, String hintText,
-      {bool isPass = false}) {
+  Widget _inputBox(TextEditingController controller, String hintText, {bool isPass = false}) {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(

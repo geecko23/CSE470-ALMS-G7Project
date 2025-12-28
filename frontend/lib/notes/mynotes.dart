@@ -22,6 +22,7 @@ class _MyNotesPageState extends State<MyNotesPage> {
     fetchMyNotes();
   }
 
+  // ================= FETCH NOTES =================
   Future<void> fetchMyNotes() async {
     setState(() {
       loading = true;
@@ -54,17 +55,20 @@ class _MyNotesPageState extends State<MyNotesPage> {
     }
   }
 
+  // ================= FILE SIZE FORMAT =================
   String formatFileSize(int bytes) {
     if (bytes < 1024) return "$bytes B";
     if (bytes < 1024 * 1024) return "${(bytes / 1024).toStringAsFixed(1)} KB";
     return "${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB";
   }
 
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
+          // Header
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -109,10 +113,13 @@ class _MyNotesPageState extends State<MyNotesPage> {
                 IconButton(
                   icon: const Icon(Icons.refresh, color: Colors.white),
                   onPressed: fetchMyNotes,
+                  tooltip: 'Refresh',
                 ),
               ],
             ),
           ),
+
+          // Notes list
           Expanded(
             child: loading
                 ? const Center(child: CircularProgressIndicator())
@@ -169,38 +176,36 @@ class _MyNotesPageState extends State<MyNotesPage> {
                             itemCount: notes.length,
                             itemBuilder: (context, index) {
                               final note = notes[index];
-                              return Card(
+                              return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
-                                elevation: 2,
-                                shape: RoundedRectangleBorder(
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color.fromRGBO(126, 194, 250, 1),
+                                      Color.fromRGBO(126, 194, 250, 0.6),
+                                    ],
+                                  ),
                                   borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.3),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
                                 ),
                                 child: ListTile(
                                   contentPadding: const EdgeInsets.all(16),
-                                  leading: Container(
-                                    width: 50,
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color.fromRGBO(126, 194, 250, 1),
-                                          Color.fromRGBO(126, 194, 250, 0.6),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: const Icon(
-                                      Icons.description,
-                                      color: Colors.white,
-                                      size: 28,
-                                    ),
+                                  leading: const Icon(
+                                    Icons.description,
+                                    color: Colors.white,
+                                    size: 32,
                                   ),
                                   title: Text(
                                     note['title'] ?? 'Untitled',
                                     style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white),
                                   ),
                                   subtitle: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,6 +215,7 @@ class _MyNotesPageState extends State<MyNotesPage> {
                                         note['description'] ?? 'No description',
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(color: Colors.white70),
                                       ),
                                       const SizedBox(height: 8),
                                       Row(
@@ -220,7 +226,7 @@ class _MyNotesPageState extends State<MyNotesPage> {
                                               vertical: 4,
                                             ),
                                             decoration: BoxDecoration(
-                                              color: const Color.fromRGBO(126, 194, 250, 0.2),
+                                              color: const Color.fromRGBO(126, 194, 250, 0.3),
                                               borderRadius: BorderRadius.circular(6),
                                             ),
                                             child: Text(
@@ -228,33 +234,23 @@ class _MyNotesPageState extends State<MyNotesPage> {
                                               style: const TextStyle(
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w600,
-                                                color: Color.fromRGBO(126, 194, 250, 1),
+                                                color: Colors.white,
                                               ),
                                             ),
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
                                             formatFileSize(note['file_size'] ?? 0),
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[600],
-                                            ),
+                                            style: const TextStyle(
+                                                fontSize: 12, color: Colors.white70),
                                           ),
                                         ],
                                       ),
                                     ],
                                   ),
-                                  trailing: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        note['filename'] ?? '',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                    ],
+                                  trailing: Text(
+                                    note['filename'] ?? '',
+                                    style: const TextStyle(color: Colors.white70),
                                   ),
                                 ),
                               );

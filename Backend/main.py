@@ -1,10 +1,10 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel
-from typing import Optional
 import mysql.connector
 import os
+import shutil
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -19,7 +19,6 @@ app.add_middleware(
 )
 
 # ===================== MODELS =====================
-
 class User(BaseModel):
     user_id: str
     name: str
@@ -43,7 +42,6 @@ class Faculty(BaseModel):
     con_status: str
 
 # ===================== HELPERS =====================
-
 def json_error(message: str, code: int = 400):
     return JSONResponse(content={"success": False, "error": message}, status_code=code)
 
@@ -55,8 +53,7 @@ def get_db():
         database="project"
     )
 
-# ===================== REGISTER =====================
-
+# ===================== USER SYSTEM =====================
 @app.post("/register")
 def register(user: User):
     db = cursor = None
@@ -75,8 +72,6 @@ def register(user: User):
         if cursor: cursor.close()
         if db: db.close()
 
-# ===================== LOGIN =====================
-
 @app.post("/login")
 def login(user: LoginUser):
     db = cursor = None
@@ -85,12 +80,10 @@ def login(user: LoginUser):
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM users WHERE email=%s", (user.email,))
         db_user = cursor.fetchone()
-
         if not db_user:
             return {"success": False, "message": "User not found"}
         if user.password != db_user["password"]:
             return {"success": False, "message": "Incorrect password"}
-
         return {
             "success": True,
             "message": "Login successful",
@@ -106,52 +99,7 @@ def login(user: LoginUser):
         if cursor: cursor.close()
         if db: db.close()
 
-# ===================== UPLOAD NOTES =====================
-
-@app.post("/api/notes/upload")
-async def upload_note(
-    title: str = Form(...),
-    description: str = Form(""),
-    course: str = Form(...),
-    uploader_id: str = Form(...),
-    file: UploadFile = File(...)
-):
-    db = cursor = None
-    try:
-        allowed_courses = ["CSE", "MAT", "PHY"]
-        if not any(x in course.upper() for x in allowed_courses):
-            return json_error("Invalid course code")
-
-        file_path = os.path.join(UPLOAD_DIR, file.filename)
-        with open(file_path, "wb") as f:
-            while chunk := await file.read(1024 * 1024):
-                f.write(chunk)
-
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute(
-            """INSERT INTO notes 
-            (title, description, course, uploader_id, filename, file_size)
-            VALUES (%s, %s, %s, %s, %s, %s)""",
-            (
-                title,
-                description,
-                course,
-                uploader_id,
-                file.filename,
-                os.path.getsize(file_path),
-            ),
-        )
-        db.commit()
-        return {"success": True, "filename": file.filename}
-    except Exception as e:
-        return json_error(str(e), 500)
-    finally:
-        if cursor: cursor.close()
-        if db: db.close()
-
 # ===================== CONSULTATIONS =====================
-
 @app.get("/consultations/{student_id}")
 def get_consultations(student_id: str):
     db = cursor = None
@@ -159,8 +107,7 @@ def get_consultations(student_id: str):
         db = get_db()
         cursor = db.cursor(dictionary=True)
         cursor.execute(
-            """SELECT course_name, faculty_name, time_slot, status
-               FROM consultations WHERE student_id=%s""",
+            "SELECT id, course_name, faculty_name, time_slot, status FROM consultations WHERE student_id=%s",
             (student_id,)
         )
         consultations = cursor.fetchall()
@@ -178,10 +125,8 @@ def book_consultation(cons: Consultation):
         db = get_db()
         cursor = db.cursor()
         cursor.execute(
-            """INSERT INTO consultations
-            (student_id, course_name, faculty_name, time_slot)
-            VALUES (%s, %s, %s, %s)""",
-            (cons.student_id, cons.course_name, cons.faculty_name, cons.time_slot),
+            "INSERT INTO consultations (student_id, course_name, faculty_name, time_slot) VALUES (%s,%s,%s,%s)",
+            (cons.student_id, cons.course_name, cons.faculty_name, cons.time_slot)
         )
         db.commit()
         return {"success": True, "message": "Consultation booked successfully"}
@@ -191,23 +136,67 @@ def book_consultation(cons: Consultation):
         if cursor: cursor.close()
         if db: db.close()
 
-# ===================== FACULTIES =====================
-
-# GET available faculties only
-@app.get("/faculties")
-def get_available_faculties():
-    db = None
-    cursor = None
+@app.put("/consultations/update_status")
+def update_status(consultation_id: int, status: str):
+    db = cursor = None
     try:
-        db = mysql.connector.connect(
-            host="localhost", user="root", password="123", database="project"
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute(
+            "UPDATE consultations SET status=%s WHERE id=%s",
+            (status, consultation_id)
         )
+        db.commit()
+        return {"success": True, "message": "Status updated"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()
+
+@app.get("/faculty/{f_id}")
+def check_faculty(f_id: str):
+    db = cursor = None
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT f_id, f_name, f_initial, con_status FROM faculties WHERE f_id=%s", (f_id,))
+        faculty = cursor.fetchone()
+        if faculty:
+            return {"success": True, "faculty": faculty}
+        return {"success": False, "message": "Not a faculty"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()
+
+@app.get("/consultations/faculty/{f_initial}")
+def get_faculty_consultations(f_initial: str):
+    db = cursor = None
+    try:
+        db = get_db()
         cursor = db.cursor(dictionary=True)
         cursor.execute(
-            "SELECT f_id, f_name, f_initial FROM faculties WHERE con_status='available'"
+            "SELECT id, student_id, course_name, faculty_name, time_slot, status FROM consultations WHERE faculty_name=%s",
+            (f_initial,)
         )
-        faculties = cursor.fetchall()
+        consultations = cursor.fetchall()
+        return {"success": True, "consultations": consultations}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()
 
+@app.get("/faculties")
+def get_available_faculties():
+    db = cursor = None
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT f_id, f_name, f_initial FROM faculties WHERE con_status='available'")
+        faculties = cursor.fetchall()
         return {"success": True, "faculties": faculties}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -215,52 +204,75 @@ def get_available_faculties():
         if cursor: cursor.close()
         if db: db.close()
 
-@app.get("/api/notes/user/{uploader_id}")
-def get_user_notes(uploader_id: str):
-    db = None
-    cursor = None
+# ===================== NOTES SYSTEM =====================
+@app.post("/api/notes/upload")
+async def upload_note(
+    title: str = Form(...),
+    description: str = Form(...),
+    course: str = Form(...),
+    uploader_id: str = Form(...),
+    file: UploadFile = File(...)
+):
+    db = cursor = None
     try:
-        db = mysql.connector.connect(
-            host="localhost", user="root", password="123", database="project"
+        # Save file
+        file_location = os.path.join(UPLOAD_DIR, file.filename)
+        with open(file_location, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        # Save metadata to DB
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute(
+            "INSERT INTO notes (title, description, course, filename, uploader_id, file_size) VALUES (%s,%s,%s,%s,%s,%s)",
+            (title, description, course, file.filename, uploader_id, os.path.getsize(file_location))
         )
+        db.commit()
+        return {"success": True, "message": "Note uploaded successfully"}
+    except Exception as e:
+        return json_error(str(e))
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()
+
+@app.get("/api/notes/user/{user_id}")
+def get_user_notes(user_id: str):
+    db = cursor = None
+    try:
+        db = get_db()
         cursor = db.cursor(dictionary=True)
         cursor.execute(
-            "SELECT id, title, description, course, filename, file_size, upload_date FROM notes WHERE uploader_id=%s ORDER BY upload_date DESC",
-            (uploader_id,)
+            "SELECT id, title, description, course, filename, uploader_id, file_size FROM notes WHERE uploader_id=%s",
+            (user_id,)
         )
         notes = cursor.fetchall()
         return {"success": True, "notes": notes}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return json_error(str(e))
     finally:
         if cursor: cursor.close()
         if db: db.close()
 
 @app.get("/api/notes/all")
 def get_all_notes():
-    db = None
-    cursor = None
+    db = cursor = None
     try:
-        db = mysql.connector.connect(
-            host="localhost", user="root", password="123", database="project"
-        )
+        db = get_db()
         cursor = db.cursor(dictionary=True)
         cursor.execute(
-            "SELECT n.id, n.title, n.description, n.course, n.filename, n.file_size, n.upload_date, u.name as uploader_name FROM notes n JOIN users u ON n.uploader_id = u.user_id ORDER BY n.upload_date DESC"
+            "SELECT n.id, n.title, n.description, n.course, n.filename, n.uploader_id, n.file_size, u.name AS uploader_name FROM notes n JOIN users u ON n.uploader_id = u.user_id"
         )
         notes = cursor.fetchall()
         return {"success": True, "notes": notes}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return json_error(str(e))
     finally:
         if cursor: cursor.close()
         if db: db.close()
 
-# Download/view note file
 @app.get("/api/notes/download/{filename}")
 def download_note(filename: str):
-    from fastapi.responses import FileResponse
     file_path = os.path.join(UPLOAD_DIR, filename)
     if os.path.exists(file_path):
-        return FileResponse(file_path, filename=filename)
+        return FileResponse(file_path, media_type="application/octet-stream", filename=filename)
     return json_error("File not found", 404)

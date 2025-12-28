@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
+import 'dart:convert';
 
 class UploadNotesPage extends StatefulWidget {
   final String studentId;
@@ -12,27 +13,38 @@ class UploadNotesPage extends StatefulWidget {
 }
 
 class _UploadNotesPageState extends State<UploadNotesPage> {
-  final titleController = TextEditingController();
-  final descriptionController = TextEditingController();
-  final courseController = TextEditingController();
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
+  final TextEditingController courseController = TextEditingController();
 
   File? selectedFile;
   bool uploading = false;
 
-  // Pick a file using FilePicker
+  // ================= FILE PICKER =================
   Future<void> pickFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 'jpg', 'jpeg', 'png'],
+      allowedExtensions: [
+        'pdf',
+        'doc',
+        'docx',
+        'txt',
+        'ppt',
+        'pptx',
+        'jpg',
+        'jpeg',
+        'png'
+      ],
     );
 
-    if (result != null) {
+    if (result != null && result.files.single.path != null) {
       setState(() {
         selectedFile = File(result.files.single.path!);
       });
     }
   }
-  // Upload the selected file along with metadata to the server
+
+  // ================= UPLOAD NOTE =================
   Future<void> uploadNote() async {
     if (titleController.text.isEmpty ||
         courseController.text.isEmpty ||
@@ -50,12 +62,10 @@ class _UploadNotesPageState extends State<UploadNotesPage> {
 
     var request = http.MultipartRequest('POST', url);
 
-
     request.fields['title'] = titleController.text.trim();
     request.fields['description'] = descriptionController.text.trim();
     request.fields['course'] = courseController.text.trim();
     request.fields['uploader_id'] = widget.studentId;
-
 
     request.files.add(await http.MultipartFile.fromPath('file', selectedFile!.path));
 
@@ -63,18 +73,20 @@ class _UploadNotesPageState extends State<UploadNotesPage> {
       var response = await request.send();
       final responseData = await http.Response.fromStream(response);
 
-      if (response.statusCode == 200) {
+      final data = jsonDecode(responseData.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Note uploaded successfully!')),
         );
-
+        // Clear inputs
         titleController.clear();
         descriptionController.clear();
         courseController.clear();
         setState(() => selectedFile = null);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: ${responseData.body}')),
+          SnackBar(content: Text('Upload failed: ${data['error'] ?? responseData.body}')),
         );
       }
     } catch (e) {
@@ -86,12 +98,12 @@ class _UploadNotesPageState extends State<UploadNotesPage> {
     }
   }
 
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.topLeft,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Center(
         child: Container(
           constraints: const BoxConstraints(maxWidth: 600),
           child: Column(
@@ -125,10 +137,14 @@ class _UploadNotesPageState extends State<UploadNotesPage> {
                 onPressed: uploading ? null : uploadNote,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.all(15),
+                  backgroundColor: const Color.fromRGBO(126, 194, 250, 1),
                 ),
                 child: uploading
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Upload Note'),
+                    : const Text(
+                        'Upload Note',
+                        style: TextStyle(color: Colors.white),
+                      ),
               ),
             ],
           ),
