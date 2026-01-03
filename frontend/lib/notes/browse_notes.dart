@@ -5,7 +5,8 @@ import 'package:http/http.dart' as http;
 import 'file_viewer_page.dart';
 
 class BrowseNotesPage extends StatefulWidget {
-  const BrowseNotesPage({super.key});
+  final String studentId;
+  const BrowseNotesPage({super.key, required this.studentId});
 
   @override
   State<BrowseNotesPage> createState() => _BrowseNotesPageState();
@@ -105,6 +106,38 @@ class _BrowseNotesPageState extends State<BrowseNotesPage> {
       return dateStr;
     }
   }
+  Future<void> saveNote(int noteId) async {
+  final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
+  final url = Uri.parse("http://$host:8000/api/notes/save");
+
+  try {
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "user_id": widget.studentId, 
+        "note_id": noteId,
+      }),
+    );
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data["success"] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Note saved successfully!')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(data["message"] ?? "Failed to save note")),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Error: $e")),
+    );
+  }
+}
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -353,14 +386,23 @@ class _BrowseNotesPageState extends State<BrowseNotesPage> {
                                           ),
                                         ),
 
-                                        // View button
-                                        IconButton(
-                                          onPressed: () => viewNote(note),
-                                          icon: const Icon(Icons.visibility),
-                                          color: const Color.fromRGBO(
-                                              126, 194, 250, 1),
-                                          tooltip: 'View',
-                                        ),
+                                        Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(Icons.bookmark_add),
+                                                onPressed: () => saveNote(note['id']),
+                                                color: const Color.fromRGBO(126, 194, 250, 1),
+                                                tooltip: 'Save',
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.visibility),
+                                                onPressed: () => viewNote(note),
+                                                color: const Color.fromRGBO(126, 194, 250, 1),
+                                                tooltip: 'View',
+                                              ),
+                                            ],
+                                          ),
                                       ],
                                     ),
                                   ),

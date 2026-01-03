@@ -165,7 +165,7 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: selectedFaculty,
+              initialValue: selectedFaculty,
               items: faculties.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
               onChanged: (value) => setState(() => selectedFaculty = value),
               decoration: const InputDecoration(

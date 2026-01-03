@@ -41,6 +41,10 @@ class Faculty(BaseModel):
     f_initial: str
     con_status: str
 
+class SaveNote(BaseModel):
+    user_id: str
+    note_id: int
+
 # ===================== HELPERS =====================
 def json_error(message: str, code: int = 400):
     return JSONResponse(content={"success": False, "error": message}, status_code=code)
@@ -276,3 +280,73 @@ def download_note(filename: str):
     if os.path.exists(file_path):
         return FileResponse(file_path, media_type="application/octet-stream", filename=filename)
     return json_error("File not found", 404)
+
+#save
+@app.post("/api/notes/save")
+def save_note(data: SaveNote):
+    db = cursor = None
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute(
+            "SELECT id FROM saved_notes WHERE user_id=%s AND note_id=%s",
+            (data.user_id, data.note_id)
+        )
+        if cursor.fetchone():
+            return {"success": False, "message": "Note already saved"}
+        
+        cursor.execute(
+            "INSERT INTO saved_notes (user_id, note_id) VALUES (%s, %s)",
+            (data.user_id, data.note_id)
+        )
+        db.commit()
+        return {"success": True, "message": "Note saved successfully"}
+    except Exception as e:
+        return json_error(str(e))
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()
+
+@app.delete("/api/notes/unsave/{user_id}/{note_id}")
+def unsave_note(user_id: str, note_id: int):
+    db = cursor = None
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute(
+            "DELETE FROM saved_notes WHERE user_id=%s AND note_id=%s",
+            (user_id, note_id)
+        )
+        db.commit()
+        return {"success": True, "message": "Note removed from saved"}
+    except Exception as e:
+        return json_error(str(e))
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()
+
+@app.get("/api/notes/saved/{user_id}")
+def get_saved_notes(user_id: str):
+    db = cursor = None
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT n.id, n.title, n.description, n.course, n.filename, 
+                   n.uploader_id, n.file_size, u.name AS uploader_name
+            FROM saved_notes sn
+            JOIN notes n ON sn.note_id = n.id
+            JOIN users u ON n.uploader_id = u.user_id
+            WHERE sn.user_id = %s
+            ORDER BY sn.id DESC
+            """,
+            (user_id,)
+        )
+        notes = cursor.fetchall()
+        return {"success": True, "notes": notes}
+    except Exception as e:
+        return json_error(str(e))
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()

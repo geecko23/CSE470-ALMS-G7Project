@@ -99,9 +99,9 @@ class _HomePageState extends State<HomePage> {
       case 3:
         return MyNotesPage(studentId: widget.studentId);
       case 4:
-        return const BrowseNotesPage();
+        return BrowseNotesPage(studentId: widget.studentId);
       case 5:
-        return ConsultationsPage(studentId: widget.studentId); // studentId works for faculty too
+        return ConsultationsPage(studentId: widget.studentId); 
       default:
         return const Center(child: Text('Page not found'));
     }
