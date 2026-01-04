@@ -32,24 +32,24 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
   // =================== CHECK USER TYPE ===================
   Future<void> checkUserType() async {
     final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
-    final url = Uri.parse("http://$host:8000/faculty/${widget.studentId}");
+    final url = Uri.parse("http://$host:8000/role/${widget.studentId}");
 
     try {
       final response = await http.get(url);
       final data = jsonDecode(response.body);
       if (data['success'] == true) {
         setState(() {
-          isFaculty = true;
-          facultyInitial = data['faculty']['f_initial'];
+          isFaculty = true; 
+          facultyInitial = data['person']['initial'];
         });
         fetchFacultyConsultations();
       } else {
-        // student
         setState(() {
-          isFaculty = false;
+          isFaculty = false; 
         });
         fetchStudentConsultations();
       }
+
     } catch (e) {
       debugPrint("User type check error: $e");
     }
@@ -58,16 +58,14 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
   // =================== FETCH FACULTIES ===================
   Future<void> fetchFaculties() async {
     final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
-    final url = Uri.parse("http://$host:8000/faculties");
+    final url = Uri.parse("http://$host:8000/consultation-managers");
 
     try {
       final response = await http.get(url);
       final data = jsonDecode(response.body);
       if (data['success'] == true) {
         setState(() {
-          faculties = List<String>.from(
-            data['faculties'].map((f) => f['f_initial']),
-          );
+          faculties = List<String>.from(data['initials']);
         });
       }
     } catch (e) {
@@ -169,7 +167,7 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
               items: faculties.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
               onChanged: (value) => setState(() => selectedFaculty = value),
               decoration: const InputDecoration(
-                labelText: "Faculty Initial",
+                labelText: "Faculty/ST Initial",
                 border: OutlineInputBorder(),
               ),
             ),

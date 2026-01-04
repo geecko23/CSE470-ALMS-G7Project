@@ -158,22 +158,42 @@ def update_status(consultation_id: int, status: str):
         if cursor: cursor.close()
         if db: db.close()
 
-@app.get("/faculty/{f_id}")
-def check_faculty(f_id: str):
+@app.get("/role/{user_id}")
+def check_role(user_id: str):
     db = cursor = None
     try:
         db = get_db()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT f_id, f_name, f_initial, con_status FROM faculties WHERE f_id=%s", (f_id,))
+
+        #Faculty check
+        cursor.execute(
+            "SELECT f_id AS id, f_name AS name, f_initial AS initial, con_status AS con_status, 'faculty' AS role "
+            "FROM faculties WHERE f_id=%s",
+            (user_id,)
+        )
         faculty = cursor.fetchone()
         if faculty:
-            return {"success": True, "faculty": faculty}
-        return {"success": False, "message": "Not a faculty"}
+            return {"success": True, "role": faculty["role"], "person": faculty}
+
+        #st check 
+        cursor.execute(
+            "SELECT st_id AS id, st_name AS name, st_initial AS initial, st_con_status AS con_status, 'tutor' AS role "
+            "FROM student_tutors WHERE st_id=%s",
+            (user_id,)
+        )
+        tutor = cursor.fetchone()
+        if tutor:
+            return {"success": True, "role": tutor["role"], "person": tutor}
+
+        #student
+        return {"success": False, "message": "Not a manager"}  # student
+
     except Exception as e:
         return {"success": False, "error": str(e)}
     finally:
         if cursor: cursor.close()
         if db: db.close()
+
 
 @app.get("/consultations/faculty/{f_initial}")
 def get_faculty_consultations(f_initial: str):
@@ -193,20 +213,30 @@ def get_faculty_consultations(f_initial: str):
         if cursor: cursor.close()
         if db: db.close()
 
-@app.get("/faculties")
-def get_available_faculties():
+@app.get("/consultation-managers")
+def get_available_managers():
     db = cursor = None
     try:
         db = get_db()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT f_id, f_name, f_initial FROM faculties WHERE con_status='available'")
-        faculties = cursor.fetchall()
-        return {"success": True, "faculties": faculties}
+
+        # available faculty initials
+        cursor.execute("SELECT f_initial AS initial FROM faculties WHERE con_status='available'")
+        fac = cursor.fetchall()
+
+        # available tutor initials (YOUR table/columns)
+        cursor.execute("SELECT st_initial AS initial FROM student_tutors WHERE st_con_status='available'")
+        tut = cursor.fetchall()
+
+        initials = [x["initial"] for x in fac] + [x["initial"] for x in tut]
+        return {"success": True, "initials": initials}
+
     except Exception as e:
         return {"success": False, "error": str(e)}
     finally:
         if cursor: cursor.close()
         if db: db.close()
+
 
 # ===================== NOTES SYSTEM =====================
 @app.post("/api/notes/upload")
