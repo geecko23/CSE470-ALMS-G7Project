@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-// import 'dart:io';
+import 'dart:io';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -26,11 +26,10 @@ class _RegisterPageState extends State<RegisterPage> {
 
     setState(() => loading = true);
 
-
+    final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
+    final url = Uri.parse("http://$host:8000/register");
   
-    // ios = 127.0.0.1  & android = 10.0.2.2
-
-    final url = Uri.parse("http://127.0.0.1:8000/register"); 
+  
 
     final body = {
       "user_id": userIdController.text,

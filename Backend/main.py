@@ -1,11 +1,12 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
 import mysql.connector
 import os
 import shutil
-
+import uvicorn
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -24,6 +25,19 @@ class User(BaseModel):
     name: str
     email: str
     password: str
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        if not v.endswith('bracu.ac.bd'):
+            raise ValueError('Email must end with bracu.ac.bd')
+        return v
+
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        return v
 
 class LoginUser(BaseModel):
     email: str
