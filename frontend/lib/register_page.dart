@@ -21,47 +21,50 @@ class _RegisterPageState extends State<RegisterPage> {
 
   bool loading = false;
 
-  Future<void> registerUser() async {
-    if (!_formKey.currentState!.validate()) return;
+Future<void> registerUser() async {
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() => loading = true);
+  setState(() => loading = true);
 
-    final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
-    final url = Uri.parse("http://$host:8000/register");
-  
-  
+  final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
+  final url = Uri.parse("http://$host:8000/register");
 
-    final body = {
-      "user_id": userIdController.text,
-      "name": nameController.text,
-      "email": emailController.text,
-      "password": passController.text,
-    };
+  final body = {
+    "user_id": userIdController.text,
+    "name": nameController.text,
+    "email": emailController.text,
+    "password": passController.text,
+  };
 
-    try {
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(body),
+  try {
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(body),
+    );
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Registration successful"), backgroundColor: Colors.green),
       );
-
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Registration successful")));
-
-        Navigator.pushReplacementNamed(context, '/login');
-
-      } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Error: ${response.body}")));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Server error: $e")));
+      Navigator.pushReplacementNamed(context, '/login');
+    } else {
+      String errorMsg = data['detail']?[0]?['msg'] ?? data['message'] ?? "Registration failed";
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
+      );
     }
-
-    setState(() => loading = false);
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Server error: $e"), backgroundColor: Colors.red),
+    );
   }
+
+  setState(() => loading = false);
+}
 
   @override
   Widget build(BuildContext context) {
