@@ -134,6 +134,31 @@ class _MyNotesPageState extends State<MyNotesPage> with SingleTickerProviderStat
       );
     }
   }
+  
+  
+  Future<void> deleteNote(int noteId) async {
+  final url = Uri.parse("http://$host:8000/api/notes/delete/${widget.studentId}/$noteId");
+
+  try {
+    final response = await http.delete(url);
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data["success"] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Note deleted successfully'), backgroundColor: Colors.green),
+      );
+      fetchUploadedNotes();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(data["message"] ?? "Failed to delete note"), backgroundColor: Colors.red),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+    );
+  }
+}
 
   //  FILTER UPLOADED NOTES
   void filterUploadedNotes() {
@@ -187,6 +212,7 @@ class _MyNotesPageState extends State<MyNotesPage> with SingleTickerProviderStat
       ),
     );
   }
+  
 
   // FILE SIZE FORMAT 
   String formatFileSize(int bytes) {
@@ -515,7 +541,13 @@ class _MyNotesPageState extends State<MyNotesPage> with SingleTickerProviderStat
               onPressed: () => viewNote(note),
               tooltip: 'View',
             ),
-            if (!isUploaded)
+            if (isUploaded)
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.white),
+                onPressed: () => deleteNote(note['id']),
+                tooltip: 'Delete',
+              )
+            else
               IconButton(
                 icon: const Icon(Icons.bookmark_remove, color: Colors.white),
                 onPressed: () => unsaveNote(note['id']),

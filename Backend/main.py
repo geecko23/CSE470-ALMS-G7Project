@@ -394,3 +394,41 @@ def get_saved_notes(user_id: str):
     finally:
         if cursor: cursor.close()
         if db: db.close()
+
+@app.delete("/api/notes/delete/{user_id}/{note_id}")
+def delete_note(user_id: str, note_id: int):
+    db = cursor = None
+    try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        
+        cursor.execute(
+            "SELECT filename, uploader_id FROM notes WHERE id=%s",
+            (note_id,)
+        )
+        note = cursor.fetchone()
+        
+        if not note:
+            return {"success": False, "message": "Note not found"}
+        
+        if note['uploader_id'] != user_id:
+            return {"success": False, "message": "Unauthorized"}
+        
+
+        file_path = os.path.join(UPLOAD_DIR, note['filename'])
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+  
+        cursor.execute("DELETE FROM saved_notes WHERE note_id=%s", (note_id,))
+        
+
+        cursor.execute("DELETE FROM notes WHERE id=%s", (note_id,))
+        
+        db.commit()
+        return {"success": True, "message": "Note deleted successfully"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()
