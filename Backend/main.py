@@ -251,6 +251,26 @@ def get_available_managers():
         if cursor: cursor.close()
         if db: db.close()
 
+@app.delete("/consultations/{consultation_id}")
+def delete_consultation(consultation_id: int):
+    db = cursor = None
+    try:
+        db = get_db()
+        cursor = db.cursor()
+
+        cursor.execute("DELETE FROM consultations WHERE id=%s", (consultation_id,))
+        db.commit()
+
+        if cursor.rowcount == 0:
+            return {"success": False, "message": "Consultation not found"}
+
+        return {"success": True, "message": "Consultation deleted successfully"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    finally:
+        if cursor: cursor.close()
+        if db: db.close()
+
 
 # ===================== NOTES SYSTEM =====================
 @app.post("/api/notes/upload")

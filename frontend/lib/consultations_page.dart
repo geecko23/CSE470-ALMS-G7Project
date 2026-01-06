@@ -208,6 +208,56 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
     }
   }
 
+  Future<void> deleteConsultation(int consultationId) async {
+  final host = Platform.isAndroid ? "10.0.2.2" : "127.0.0.1";
+  final url = Uri.parse("http://$host:8000/consultations/$consultationId");
+
+  try {
+    final response = await http.delete(url);
+    final data = jsonDecode(response.body);
+
+    if (data['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Consultation deleted")),
+      );
+      fetchFacultyConsultations();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(data['error'] ?? data['message'] ?? "Delete failed")),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Delete error: $e")),
+    );
+  }
+}
+  void confirmDelete(int consultationId) {
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text("Delete Consultation"),
+      content: const Text("Are you sure you want to delete this consultation?"),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          onPressed: () {
+            Navigator.pop(context);
+            deleteConsultation(consultationId);
+          },
+          child: const Text("Delete"),
+        ),
+      ],
+    ),
+  );
+}
+
+
+
   Color getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case "accepted":
@@ -282,29 +332,37 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
                           Row(
                             children: [
                               const Text("Status: "),
-                              isFaculty
-                                  ? DropdownButton<String>(
-                                      value: c['status'],
-                                      items: ["pending", "accepted", "declined", "completed"]
-                                          .map((s) => DropdownMenuItem(
-                                                value: s,
-                                                child: Text(
-                                                  s,
-                                                  style: TextStyle(color: getStatusColor(s)),
-                                                ),
-                                              ))
-                                          .toList(),
-                                      onChanged: (value) {
-                                        if (value != null) updateStatus(c['id'], value);
-                                      },
-                                    )
-                                  : Text(
-                                      c['status'],
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: getStatusColor(c['status']),
-                                      ),
-                                    ),
+                              if (isFaculty) ...[
+                                DropdownButton<String>(
+                                  value: c['status'],
+                                  items: ["pending", "accepted", "declined", "completed"]
+                                      .map((s) => DropdownMenuItem(
+                                            value: s,
+                                            child: Text(
+                                              s,
+                                              style: TextStyle(color: getStatusColor(s)),
+                                            ),
+                                          ))
+                                      .toList(),
+                                  onChanged: (value) {
+                                    if (value != null) updateStatus(c['id'], value);
+                                  },
+                                ),
+                                const Spacer(),
+                                IconButton(
+                                  tooltip: "Delete consultation",
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () => confirmDelete(c['id']),
+                                ),
+                              ] else ...[
+                                Text(
+                                  c['status'],
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: getStatusColor(c['status']),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ],

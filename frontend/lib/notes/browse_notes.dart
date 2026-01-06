@@ -166,28 +166,33 @@ class _BrowseNotesPageState extends State<BrowseNotesPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Browse Notes',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Browse Notes',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Explore notes from all students',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white70,
+                          SizedBox(height: 4),
+                          Text(
+                            'Explore notes from all students',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white70,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.refresh, color: Colors.white),
@@ -195,6 +200,7 @@ class _BrowseNotesPageState extends State<BrowseNotesPage> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 16),
                 // Search bar
                 TextField(
@@ -428,12 +434,17 @@ class _BrowseNotesPageState extends State<BrowseNotesPage> {
         children: [
           Icon(icon, size: 14, color: const Color.fromRGBO(126, 194, 250, 1)),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color.fromRGBO(126, 194, 250, 1),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color.fromRGBO(126, 194, 250, 1),
+              ),
             ),
           ),
         ],

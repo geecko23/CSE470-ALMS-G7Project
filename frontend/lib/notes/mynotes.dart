@@ -500,7 +500,9 @@ class _MyNotesPageState extends State<MyNotesPage> with SingleTickerProviderStat
               style: const TextStyle(color: Colors.white70),
             ),
             const SizedBox(height: 8),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -517,20 +519,19 @@ class _MyNotesPageState extends State<MyNotesPage> with SingleTickerProviderStat
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
                 Text(
                   formatFileSize(note['file_size'] ?? 0),
                   style: const TextStyle(fontSize: 12, color: Colors.white70),
                 ),
-                if (!isUploaded && note['uploader_name'] != null) ...[
-                  const SizedBox(width: 8),
+                if (!isUploaded && note['uploader_name'] != null)
                   Text(
                     'by ${note['uploader_name']}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12, color: Colors.white70),
                   ),
-                ],
               ],
-            ),
+              ),
           ],
         ),
         trailing: Row(
