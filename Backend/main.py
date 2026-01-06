@@ -47,7 +47,9 @@ class Consultation(BaseModel):
     student_id: str
     course_name: str
     faculty_name: str
+    day: str
     time_slot: str
+
 
 class Faculty(BaseModel):
     f_id: str
@@ -125,7 +127,7 @@ def get_consultations(student_id: str):
         db = get_db()
         cursor = db.cursor(dictionary=True)
         cursor.execute(
-            "SELECT id, course_name, faculty_name, time_slot, status FROM consultations WHERE student_id=%s",
+            "SELECT id, course_name, faculty_name, day, time_slot, status FROM consultations WHERE student_id=%s",
             (student_id,)
         )
         consultations = cursor.fetchall()
@@ -143,9 +145,10 @@ def book_consultation(cons: Consultation):
         db = get_db()
         cursor = db.cursor()
         cursor.execute(
-            "INSERT INTO consultations (student_id, course_name, faculty_name, time_slot) VALUES (%s,%s,%s,%s)",
-            (cons.student_id, cons.course_name, cons.faculty_name, cons.time_slot)
+            "INSERT INTO consultations (student_id, course_name, faculty_name, day, time_slot) VALUES (%s,%s,%s,%s,%s)",
+            (cons.student_id, cons.course_name, cons.faculty_name, cons.day, cons.time_slot)
         )
+
         db.commit()
         return {"success": True, "message": "Consultation booked successfully"}
     except Exception as e:
@@ -216,7 +219,7 @@ def get_faculty_consultations(f_initial: str):
         db = get_db()
         cursor = db.cursor(dictionary=True)
         cursor.execute(
-            "SELECT id, student_id, course_name, faculty_name, time_slot, status FROM consultations WHERE faculty_name=%s",
+            "SELECT id, student_id, course_name, faculty_name, day, time_slot, status FROM consultations WHERE faculty_name=%s"
             (f_initial,)
         )
         consultations = cursor.fetchall()

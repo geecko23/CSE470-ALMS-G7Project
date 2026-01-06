@@ -18,6 +18,9 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
   List consultations = [];
   List<String> faculties = [];
   String? selectedFaculty;
+  final List<String> days = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
+  String? selectedDay;
+
 
   final TextEditingController courseController = TextEditingController();
   final TextEditingController timeSlotController = TextEditingController();
@@ -116,7 +119,10 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
 
   // =================== BOOK CONSULTATION (STUDENTS ONLY) ===================
   Future<void> bookConsultation() async {
-    if (selectedFaculty == null || courseController.text.isEmpty || timeSlotController.text.isEmpty) {
+    if (selectedFaculty == null ||
+    selectedDay == null ||
+    courseController.text.isEmpty ||
+    timeSlotController.text.isEmpty){
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Fill all fields")),
       );
@@ -129,8 +135,10 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
       "student_id": widget.studentId,
       "course_name": courseController.text.trim(),
       "faculty_name": selectedFaculty,
+      "day": selectedDay,
       "time_slot": timeSlotController.text.trim(),
     };
+
 
     try {
       final response = await http.post(url, headers: {"Content-Type": "application/json"}, body: jsonEncode(body));
@@ -141,6 +149,7 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
         courseController.clear();
         timeSlotController.clear();
         selectedFaculty = null;
+        selectedDay = null;
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['error'] ?? "Booking failed")));
       }
@@ -168,6 +177,18 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
               onChanged: (value) => setState(() => selectedFaculty = value),
               decoration: const InputDecoration(
                 labelText: "Faculty/ST Initial",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: selectedDay,
+              items: days
+                  .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                  .toList(),
+              onChanged: (value) => setState(() => selectedDay = value),
+              decoration: const InputDecoration(
+                labelText: "Day",
                 border: OutlineInputBorder(),
               ),
             ),
@@ -328,6 +349,8 @@ class _ConsultationsPageState extends State<ConsultationsPage> {
                           Text("${c['course_name']} - ${c['faculty_name']}", style: const TextStyle(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 8),
                           Text("Time: ${c['time_slot']}"),
+                          const SizedBox(height: 8),
+                          Text("Day: ${c['day']}"),  
                           const SizedBox(height: 8),
                           Row(
                             children: [
